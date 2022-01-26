@@ -1,0 +1,143 @@
+pragma solidity ^0.5.13;
+
+import "./apoyoEscolar.sol"; //importe clase padre
+
+
+
+
+contract ApoyoGeneral is AyudaEscolar {  //apoyo escolar hereda de AyudaEscolar
+
+    //variables
+
+    uint numeroEstudiantes; // declaracion numero de estudiantes ayudados mediante este contrato
+
+
+    //mappins
+
+    //mapping(address=>datosEstudintes) public estudiantesApoyados; //posible implementacion de guardar datos del plan herencia del 
+    //struct de  datosEstudiantes por el costo de gas se ha desactivado
+    mapping(address=>Apoyo) public campannasApoyo; // es el registro de los detalles de 
+
+    //structs
+
+
+    struct Apoyo {
+
+        address payable  addressOwner; // Dueño del apoyo o a quien va dirigido el apoyo, el nombre es un resago de la clase heredada. en proximo 
+                                    //version ha de ser actualizado a un nombre más acorde a lo que contiene ej: addressBeneficiario
+        uint objetivo; // es el objetivo a cumplir en Ethe
+        uint timestampInicio;//fecha de inicio del apoyo en timestamp
+        uint timestampFin;//fecha de fin del apoyo en timestamp
+        uint balanceTotal; // balance del programa de apoyo hacia el estudiante
+        
+    }
+
+
+    //transforma dias a timestamp
+    function diasATimestam(uint _dias) pure  private returns(uint){
+
+        return _dias * 86400;
+        
+
+    }
+
+    //cambia de Ether a Wei
+    function etherToWei(uint _cantidadEnEther) pure  private returns(uint){
+
+        return _cantidadEnEther * 1000000000000000000;
+ 
+    }
+
+
+
+    //esta funcion crea un plan de apoyo escolar. 
+    function crearApoyo(address payable _address, uint _objetivo, uint _duracionEnDias) public payable onlyOwner {
+
+        uint _timestampFin = now + diasATimestam(_duracionEnDias); //se estableve el tiempo de termino del plan de ayuda
+        Apoyo memory nuevoApoyo  = Apoyo(_address,_objetivo,now,_timestampFin,0); //instanceamiento del struct Apoyo
+        campannasApoyo[_address] = nuevoApoyo; // agrega la campaña al mapping de campañas 
+        numeroEstudiantes++; //se incrementa el numero de estudiantes ayudados
+        
+    }
+
+
+    function apoyoIndividual(address _addressBeneficiario) public payable fechaValida(_addressBeneficiario){
+
+        campannasApoyo[_addressBeneficiario].balanceTotal += msg.value; //se agrega al mapping de apoyo el aporte
+        donadoPorMesena[msg.sender] += msg.value; // se agrega al mapping del registro de aporte por mesena.
+
+      
+    }
+
+        function retiroDinero(address payable _address, uint _cantidad) public payable soloBeneficiado(_address) {
+
+        _cantidad = etherToWei(_cantidad); //convierrte el ether en wei
+        require(campannasApoyo[_address].balanceTotal >= campannasApoyo[_address].objetivo,"Aun no llegas al Objetivo");// verifica que se haya cumplido el objetivo
+        _address.transfer(_cantidad); //transfiere en si
+        campannasApoyo[_address].balanceTotal -= _cantidad; // descuento de la cuenta 
+                
+
+    }
+
+    function retiroTotalDinero(address payable _address) public payable soloBeneficiado(_address) {
+       
+        uint _cantidad = etherToWei(campannasApoyo[_address].balanceTotal);//convierrte el ether en wei
+        require(campannasApoyo[_address].balanceTotal >= campannasApoyo[msg.sender].objetivo,"Aun no llegas al Objetivo");
+        msg.sender.transfer(_cantidad); //se hace la transferencia desde este contrato hacia el msg.sender
+        require(campannasApoyo[_address].balanceTotal == _cantidad);// es una verificación más para que no se haga negativo o evitar cualquier problemas con las cantidades
+        campannasApoyo[_address].balanceTotal -= _cantidad;
+
+                
+
+    }
+
+
+    //Serie de funciones get como ayuda
+        
+    function getApoyoObjetivo(address  _address) public view returns(uint){
+
+        return campannasApoyo[_address].objetivo;
+
+    }  
+
+    function getApoyoTimeStart(address _address) public view returns(uint){
+
+        return campannasApoyo[_address].timestampInicio;
+
+    }
+
+    function getApoyoBalance(address _address) public view returns(uint){
+
+        return campannasApoyo[_address].balanceTotal;
+
+    }
+
+
+
+    
+    modifier soloBeneficiado(address _address) {
+
+        require(campannasApoyo[_address].addressOwner == msg.sender, "No te corresponde");
+        _;
+
+    }
+
+    modifier fechaValida(address _address){
+
+    require((campannasApoyo[_address].timestampInicio < now) && (campannasApoyo[_address].timestampFin < now), "Fuera de tiempo");
+    _;
+    
+    }
+
+
+    constructor() public {
+
+        numeroEstudiantes = 0;
+
+    }
+
+
+
+
+
+}
