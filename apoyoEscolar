@@ -1,0 +1,107 @@
+pragma solidity ^0.5.13;
+
+contract AyudaEscolar {
+
+    //variables estudiante
+    address payable estudiante; // direccion del estudiante a ayudar
+    uint objetivo; // obletivo del plan
+    uint balanceTotal;  //balance del plan de ayuda
+    uint numeroDeAyudas; //numeor de ayudas que ha recibido
+
+    //variables donador
+    address payable public  mesenas;  //direccion del mesenas es pagable pero podria no serlo (revisar)
+
+    //mapins
+    mapping(address=>uint) public donadoPorMesena; //cantidad donada por mesenas
+    
+
+    //variables de Uso
+    
+
+    //strucks no se ha implementado por el alto costo de gas
+    struct datosEstudintes {
+
+        string  fichaEstudiante; //link a la ficha en web 2.0              
+        
+    }
+
+
+    //funciones
+    function donarDinero() public payable {
+        
+        uint _cantidad = msg.value;
+        donadoPorMesena[mesenas] += _cantidad;
+        balanceTotal += _cantidad;              //ayuda a comparar con el objetivo
+        numeroDeAyudas++;
+
+    }
+
+
+    function getBalance() public view returns(uint){
+
+        return address(this).balance;
+
+    }
+
+    function getObjetivo() public view returns(uint){
+
+        return objetivo;
+
+    }
+
+    function getNumeroDeAyudas()public view returns(uint){
+
+        return numeroDeAyudas;
+
+    }
+
+
+    function estudianteRetiraDinero() public {
+
+
+        require(balanceTotal >= objetivo,"Aun no llegas al Objetivo");
+        estudiante.transfer(this.getBalance());
+        balanceTotal = 0;
+        
+    }
+
+        function estudianteRetiraDineroB() private {
+
+        require(balanceTotal >= objetivo,"Aun no llegas al Objetivo");
+        estudiante.transfer(this.getBalance());
+        balanceTotal = 0;
+        
+    }
+
+    
+    modifier onlyOwner() {
+
+        require(msg.sender == estudiante, "No te corresponde");
+        _;
+
+    }
+
+    
+
+
+    function setObjetivo(uint _cantidad) public onlyOwner {
+
+        objetivo = _cantidad;
+
+    }
+
+
+    constructor() public{
+
+        estudiante = msg.sender;
+        numeroDeAyudas = 0;
+        
+
+
+    }
+
+
+
+
+
+}
